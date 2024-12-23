@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Response 
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from sae_lens import SAE 
 from threading import Thread 
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer 
@@ -86,6 +87,7 @@ async def chat(request: ChatRequest):
                                          generation_kwargs, 
                                          input_ids, 
                                          steering_vector=models["sae"].W_dec[SAE_IDX])
+        
 
         try:
             for new_text in streamer:
