@@ -7,3 +7,7 @@ install:
 auth:
 	@gcloud auth application-default login
 	@gcloud config set project llama-steer
+
+.PHONY: run
+run:
+	@poetry run python -m uvicorn api.main:app --port=8000

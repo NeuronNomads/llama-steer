@@ -9,7 +9,9 @@ Before setting up your environment, make sure you have the following installed (
 2. `poetry`
 3. `terraform` 
 
-From the root of the repo, 
+### Backend
 
-1. To authenticate to the `llama-steer` google cloud project: Run `make auth`. 
-2. To setup your local environment: Run `make install`. 
+From the backend directory, 
+
+1. Run `make auth` to authenticate to the `llama-steer` google cloud project.
+2. Run `make install` to setup your local environment. 
