@@ -10,4 +10,4 @@ auth:
 
 .PHONY: run
 run:
-	@poetry run python -m uvicorn api.main:app --port=8000
+	@poetry run python -m uvicorn api.main:app --reload --port=8000
