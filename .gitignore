@@ -174,3 +174,6 @@ cython_debug/
 *.tfstate
 *.tfstate.*
 .terraform 
+
+# Large tensor files
+**/steering_vectors/**
