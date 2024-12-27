@@ -13,7 +13,6 @@ import numpy as np
 
 models = {}
 hf_token = os.environ.get("HF_TOKEN")
-
 @asynccontextmanager 
 async def lifespan(app: FastAPI): 
     """
@@ -29,11 +28,13 @@ async def lifespan(app: FastAPI):
         print("Using MPS")
     else:
         device = torch.device("cpu")
-
+    
+    WEIGHTS_PATH = os.getenv("WEIGHTS_PATH")
+    print("this is weights_path", WEIGHTS_PATH)
 
     print("Loading tokenizer...")    
     try: 
-        models["tokenizer"] = AutoTokenizer.from_pretrained(MODEL_ID, hf_token=hf_token)
+        models["tokenizer"] = AutoTokenizer.from_pretrained(WEIGHTS_PATH, local_files_only=True)
         print("Succesfully loaded tokenizer...")
 
         models["streamer"] = TextIteratorStreamer(models["tokenizer"])
@@ -43,9 +44,11 @@ async def lifespan(app: FastAPI):
     
     print("Loading LLM...", flush=True)
     try:
-        models["llm"] = AutoModelForCausalLM.from_pretrained(MODEL_ID,
+        models["llm"] = AutoModelForCausalLM.from_pretrained(WEIGHTS_PATH,
                                                      torch_dtype=torch.bfloat16,
-                                                     device_map="auto")        
+                                                     device_map="auto",
+                                                     local_files_only=True
+)   
         print("Succesfully loaded steering LLM...", flush=True)
     except Exception as e:
         print(f"Failed to load LLM: {e}", flush=True) 
@@ -61,7 +64,7 @@ async def lifespan(app: FastAPI):
     
     print("Shutting down server...")
     models.clear()
-    print("Models cleared from memory...")
+    print("Models cleared from memory...")    
 
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(CORSMiddleware,
@@ -93,30 +96,37 @@ async def chat(websocket: WebSocket):
                 top_p=0.9
             )
 
-            streamer, hook = await hooked_generate(models["llm"],
+            streamer, hook, thread = await hooked_generate(models["llm"],
                                            models["tokenizer"],
                                            generation_kwargs,
                                            input_ids,
                                            steering_vector=models["steering_vector"])
 
-            try:
-                # Stream the tokens as they're generated
-                st = time.time()                
-                for text in streamer:                                        
-                    await websocket.send_text(text)
-                    et = time.time()
-                    print(f"Time taken to send text {text} is {et - st} seconds")
-                    st = time.time()
-                    
-            finally:
-                hook.remove()
+            
+            # Stream the tokens as they're generated
+            st = time.time()                
+            for text in streamer:                                        
+                await websocket.send_text(text)
+                et = time.time()
+                print(f"Time taken to send text {text} is {et - st} seconds")
+                st = time.time()                                
 
         except Exception as e:
             await websocket.send_text(f"Error: {str(e)}")
             raise e
+        
 
     except WebSocketDisconnect:
         print("Client disconnected")
+    
+    finally:
+        await websocket.close()
+        if hook:
+            print("Removing hook...")
+            hook.remove()
+        if thread and thread.is_alive():
+            print("Removing thread...")
+            thread.join(timeout=1.0)
 
 def generate_input_ids(tokenizer: AutoTokenizer, prompt: str, device: str) -> torch.Tensor:
     try:        
@@ -186,8 +196,9 @@ async def hooked_generate(model: AutoModelForCausalLM,
         thread = Thread(target=model.generate, kwargs=generation_kwargs)
         thread.start()        
         
-        return streamer, hook
+        return streamer, hook, thread 
 
     except Exception as e:
         hook.remove()
         raise Exception(f"Failed to generate text: {e}")
+        

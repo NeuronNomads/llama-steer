@@ -2,7 +2,7 @@ import asyncio
 import sys 
 import websockets
 
-DEFAULT_URL = "ws://0.0.0.0:8000/chat"
+DEFAULT_URL = "ws://127.0.0.1:8080/chat"
 
 async def main():
     async with websockets.connect(

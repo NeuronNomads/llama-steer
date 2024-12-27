@@ -1,0 +1,2 @@
+export WEIGHTS_PATH=""
+export HF_TOKEN=""

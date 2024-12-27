@@ -11,7 +11,7 @@ auth:
 
 .PHONY: run-be
 run-be:
-	@poetry run python -m uvicorn api.main:app --reload --reload-dir api --port=8000
+	@poetry run python -m uvicorn api.main:app --reload --reload-dir api --port=8080
 
 .PHONY: build
 build: 
@@ -19,7 +19,7 @@ build:
 
 .PHONY: run
 run: 
-	@docker run -p 8000:8000 llama-steer
+	@docker run -p 8080:8080 llama-steer
 
 .PHONY: push
 push:
