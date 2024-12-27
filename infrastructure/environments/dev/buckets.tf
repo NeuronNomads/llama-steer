@@ -16,3 +16,17 @@ resource "google_storage_bucket" "default" {
   }
 }
 
+resource "google_storage_bucket" "models" {
+  name     = "${var.project_id}-models"
+  project  = var.project_id
+  location = "US"
+
+  force_destroy               = false
+  public_access_prevention    = "enforced"
+  uniform_bucket_level_access = true
+
+  versioning {
+    enabled = true
+  }
+}
+

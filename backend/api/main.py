@@ -1,36 +1,18 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Response, WebSocket, WebSocketDisconnect 
 from fastapi.middleware.cors import CORSMiddleware
-from sae_lens import SAE 
 from threading import Thread 
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer 
 
-from api.constants import LAYER, MAX_TOKENS, MODEL_ID, SAE_ID, SAE_IDX, SAE_RELEASE, STEERING_COEFF
-from api.models import ChatRequest, ChatResponse 
-
-import cProfile
-import pstats 
+from api.constants import LAYER, MAX_TOKENS, MODEL_ID, STEERING_COEFF
+ 
 import os 
 import time 
 import torch 
 import numpy as np 
 
 models = {}
-
-def profile_streamer(streamer):
-    profiler = cProfile.Profile()
-    profiler.enable()
-    
-    tokens = []
-    for text in streamer:
-        tokens.append(text)
-        
-    profiler.disable()
-    stats = pstats.Stats(profiler)
-    stats.sort_stats('cumtime')
-    stats.print_stats(20)  # Print top 20 time-consuming operations
-    
-    return tokens
+hf_token = os.environ.get("HF_TOKEN")
 
 @asynccontextmanager 
 async def lifespan(app: FastAPI): 
@@ -51,22 +33,22 @@ async def lifespan(app: FastAPI):
 
     print("Loading tokenizer...")    
     try: 
-        models["tokenizer"] = AutoTokenizer.from_pretrained(MODEL_ID)
+        models["tokenizer"] = AutoTokenizer.from_pretrained(MODEL_ID, hf_token=hf_token)
         print("Succesfully loaded tokenizer...")
 
         models["streamer"] = TextIteratorStreamer(models["tokenizer"])
-        print("Succesfully loaded streamer...")
+        print("Succesfully loaded streamer...", flush=True)
     except Exception as e:
         print(f"Failed to load tokenizer: {e}")
     
-    print("Loading LLM...")
+    print("Loading LLM...", flush=True)
     try:
         models["llm"] = AutoModelForCausalLM.from_pretrained(MODEL_ID,
                                                      torch_dtype=torch.bfloat16,
                                                      device_map="auto")        
-        print("Succesfully loaded steering LLM...")
+        print("Succesfully loaded steering LLM...", flush=True)
     except Exception as e:
-        print(f"Failed to load LLM: {e}") 
+        print(f"Failed to load LLM: {e}", flush=True) 
 
     print("Loading Steering Vector...")       
     try:        
