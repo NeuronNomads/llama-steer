@@ -1,3 +1,7 @@
 project_id = "llama-steer"
 region = "us-central1"
 env = "dev"
+backend_cpu_limit = "6"
+backend_memory_limit = "24Gi"
+backend_registry_name = "backend"
+backend_app_name = "backend"
