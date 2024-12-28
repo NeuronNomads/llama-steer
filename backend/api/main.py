@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Response, WebSocket, WebSocketDisconnect 
 from fastapi.middleware.cors import CORSMiddleware
+from google.cloud import storage
 from threading import Thread 
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer 
 
@@ -10,6 +11,29 @@ import os
 import time 
 import torch 
 import numpy as np 
+import shutil 
+
+def download_model_weights(source_path: str, target_dir: str = "/app/model"):
+    """
+    Download model weights from a source location and save them to the target directory.
+    
+    Args:
+        source_path: Path to the model weights
+        target_dir: Directory to save the downloaded weights
+    """        
+    try:
+        # Assuming this is a local path or URL you have permission to access
+        if os.path.exists(source_path):
+            # If source is a local path, copy the files
+            target_path = os.path.join(target_dir, os.path.basename(source_path))
+            shutil.copy2(source_path, target_path)
+            print(f"Successfully copied model weights to {target_path}")
+            
+    except Exception as e:
+        print(f"Error downloading model weights: {str(e)}")
+        raise
+
+
 
 models = {}
 hf_token = os.environ.get("HF_TOKEN")
@@ -19,7 +43,7 @@ async def lifespan(app: FastAPI):
     Utilize the lifespan to load in tokenizer, LLM and SAE
     """
 
-    print("Determine device...")
+    print("Determine device...", flush=True)
     if torch.cuda.is_available():
         device = torch.device("cuda")
         print("Using CUDA")
@@ -27,10 +51,32 @@ async def lifespan(app: FastAPI):
         device = torch.device("mps")
         print("Using MPS")
     else:
-        device = torch.device("cpu")
+        device = torch.device("cpu")    
     
-    WEIGHTS_PATH = os.getenv("WEIGHTS_PATH")
-    print("this is weights_path", WEIGHTS_PATH)
+    WEIGHTS_PATH = os.getenv("WEIGHTS_PATH", "/app/model")
+    BUCKET_NAME = "llama-steer-models"
+    MODEL_PATH = "5f0b02c75b57c5855da9ae460ce51323ea669d8a"
+
+    # Download model files from GCS
+    try:
+        if not os.path.exists(WEIGHTS_PATH):
+            os.makedirs(WEIGHTS_PATH, exist_ok=True)
+            
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(BUCKET_NAME)
+        blobs = bucket.list_blobs(prefix=MODEL_PATH)
+        
+        print(f"Downloading model files to {WEIGHTS_PATH}...", flush=True)
+        for blob in blobs:
+            filename = os.path.basename(blob.name)
+            destination_path = os.path.join(WEIGHTS_PATH, filename)
+            blob.download_to_filename(destination_path)
+            print(f"Downloaded {filename}", flush=True)
+            
+        print("Successfully downloaded all model files")
+    except Exception as e:
+        print(f"Error downloading model files: {e}")
+        raise
 
     print("Loading tokenizer...")    
     try: 

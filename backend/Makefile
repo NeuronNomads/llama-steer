@@ -15,13 +15,15 @@ run-be:
 
 .PHONY: build
 build: 
-	@docker build --platform linux/amd64 --build-arg HF_TOKEN=${HF_TOKEN} -t us-central1-docker.pkg.dev/llama-steer/backend/llama-steer .
+	@docker build --platform linux/amd64 --build-arg HF_TOKEN=${HF_TOKEN} --build-arg GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} -t us-central1-docker.pkg.dev/llama-steer/backend/llama-steer .
 
 .PHONY: run
 run: 
-	@docker run -p 8080:8080 llama-steer
+	@docker run -p 8080:8080 us-central1-docker.pkg.dev/llama-steer/backend/llama-steer
 
 .PHONY: push
 push:
 	@docker push us-central1-docker.pkg.dev/llama-steer/backend/llama-steer
+
+
 

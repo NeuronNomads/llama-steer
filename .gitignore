@@ -180,3 +180,6 @@ cython_debug/
 
 # direnv configuration
 **/.envrc
+
+# llama model
+**/llama-model/**
